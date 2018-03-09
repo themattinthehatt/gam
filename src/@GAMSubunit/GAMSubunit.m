@@ -252,7 +252,7 @@ methods
     %           specify set of layers to apply the new reg_params
     %           to (default: all layers)
     %       'reg_type', scalar
-    %           'l2_weights' | 'l2_biases'
+    %           'l2_weights' | 'l2_biases' | 'l1_weights' | 'l1_biases'
     %           first input is a string specifying the type of 
     %           regularization, followed by a scalar giving the associated 
     %           regularization value, which will be applied to the layers

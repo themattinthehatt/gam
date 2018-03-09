@@ -7,6 +7,10 @@ classdef GAM
 %
 % Author: Matt Whiteway
 %   08/31/17
+% 
+% TODO
+%   - standardize documentation (INPUTS->INPUT)
+%   - align to margins
 
 properties
     add_subunits            % array of additive subunits
@@ -50,7 +54,6 @@ end
 % methods that are implemented in separate files
 methods
     net = fit_add_subunits(net, fit_struct);
-    net = fit_add_subunits_op(net, fit_struct);
 end
 
 
@@ -65,7 +68,6 @@ methods
     % must be called after initializing the GAM object.
     %
     % INPUTS:
-    %
     %   optional key-value pairs: [defaults]
     %       'noise_dist', string
     %           ['gauss'] | 'poiss'
@@ -242,7 +244,7 @@ methods
     %           specify set of subunits to apply the new reg_params
     %           to (default: all subunits of specified type)
     %       'reg_type', scalar
-    %           'l2_weights' | 'l2_biases'
+    %           'l2_weights' | 'l2_biases' | 'l1_weights' | 'l1_biases'
     %           first input is a string specifying the type of 
     %           regularization, followed by a scalar giving the associated 
     %           regularization value, which will be applied to the subunits

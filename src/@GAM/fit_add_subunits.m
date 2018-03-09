@@ -138,7 +138,7 @@ end
 
 [~, grad] = objective_fun(params);
 first_order_optim = max(abs(grad));
-if first_order_optim > 1e-2
+if first_order_optim > 1e-2 && optim_params.max_iter > 1
     warning('First-order optimality: %.3f, fit might not be converged!', ...
         first_order_optim);
 end
@@ -308,9 +308,10 @@ net = net.update_fit_history(fs, params, f, output);
 
         % construct gradient vector
         for jj = 1:fit_num_layers{ii}
-            param_grad = [param_grad; ...
-                          grad_weights{ii,jj}(:); ...
-                          grad_biases{ii,jj}];
+            param_grad = [ ...
+                param_grad; ...
+                grad_weights{ii,jj}(:); ...
+                grad_biases{ii,jj}];
         end
     end
     
@@ -322,31 +323,56 @@ net = net.update_fit_history(fs, params, f, output);
     param_reg_pen_grad = zeros(num_sub_params,1);
     for ii = 1:num_fit_subs
         for jj = 1:fit_num_layers{ii}
-            % get reg pen for weights
+            % get reg pen for weights (only if fitting)
             if fit_layers{ii}(jj) == 1
-                reg_lambda = net.add_subunits(fit_subs(ii)).layers(jj). ...
+                % l2
+                reg_lambda_l2 = net.add_subunits(fit_subs(ii)).layers(jj). ...
                     reg_lambdas.l2_weights;
-            else
-                reg_lambda = 0;
+                if reg_lambda_l2 > 0
+                    param_reg_pen = param_reg_pen + 0.5 * reg_lambda_l2 * ...
+                        sum(weights{ii,jj}(:).^2);
+                    param_reg_pen_grad(sub_params(ii).param_indxs_sub{jj,1}) = ...
+                        reg_lambda_l2 * weights{ii,jj}(:);
+                end
+                % l1
+                reg_lambda_l1 = net.add_subunits(fit_subs(ii)).layers(jj). ...
+                    reg_lambdas.l1_weights;
+                if reg_lambda_l1 > 0
+                    param_reg_pen = param_reg_pen + reg_lambda_l1 * ...
+                        sum(abs(weights{ii,jj}(:)));
+                    param_reg_pen_grad(sub_params(ii).param_indxs_sub{jj,1}) = ...
+                        param_reg_pen_grad(sub_params(ii).param_indxs_sub{jj,1}) + ...
+                        reg_lambda_l1 * (2 * heaviside(weights{ii,jj}(:)) - 1);
+                end
             end
-            param_reg_pen = param_reg_pen + 0.5 * reg_lambda * ...
-                            sum(weights{ii,jj}(:).^2);
-            param_reg_pen_grad(sub_params(ii).param_indxs_sub{jj,1}) = ...
-                            reg_lambda * weights{ii,jj}(:);
-            % get reg pen for biases
+            
+            % get reg pen for biases (only if fitting)
             if fit_layers{ii}(jj) == 1
-                reg_lambda = net.add_subunits(fit_subs(ii)).layers(jj). ...
+                % l2
+                reg_lambda_l2 = net.add_subunits(fit_subs(ii)).layers(jj). ...
                     reg_lambdas.l2_biases;
-            else
-                reg_lambda = 0;
+                if reg_lambda_l2 > 0
+                    param_reg_pen = param_reg_pen + 0.5 * reg_lambda_l2 * ...
+                        sum(biases{ii,jj}.^2);
+                    param_reg_pen_grad(sub_params(ii).param_indxs_sub{jj,2}) = ...
+                        reg_lambda_l2 * biases{ii,jj};
+                end
+                % l1
+                reg_lambda_l1 = net.add_subunits(fit_subs(ii)).layers(jj). ...
+                    reg_lambdas.l1_biases;
+                if reg_lambda_l1 > 0
+                    param_reg_pen = param_reg_pen + reg_lambda_l1 * ...
+                        sum(abs(biases{ii,jj}));
+                    param_reg_pen_grad(sub_params(ii).param_indxs_sub{jj,2}) = ...
+                        param_reg_pen_grad(sub_params(ii).param_indxs_sub{jj,2}) + ...
+                        reg_lambda_l1 * (2 * heaviside(biases{ii,jj}) - 1);
+                end
             end
-            param_reg_pen = param_reg_pen + 0.5 * reg_lambda * ...
-                            sum(biases{ii,jj}.^2);
-            param_reg_pen_grad(sub_params(ii).param_indxs_sub{jj,2}) = ...
-                            reg_lambda * biases{ii,jj};
+
         end
     end
 
+    % regularization for final biases not currently supported
     bias_reg_pen = 0;
     bias_reg_pen_grad = zeros(size(final_biases));
     

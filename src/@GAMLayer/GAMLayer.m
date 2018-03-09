@@ -30,8 +30,8 @@ properties (Hidden)
          'exp' ...          % f(x) = exp(x)
         };
     allowed_regtypes = ...
-        {'l2_biases', ...
-         'l2_weights'};
+        {'l2_weights', 'l2_biases', ...
+         'l1_weights', 'l1_biases'};
     allowed_init_types = ...
         {'gauss', ...
          'trunc_gauss', ...
@@ -126,7 +126,7 @@ methods
     % INPUTS:
     %   optional key-value pairs:
     %       'reg_type', scalar
-    %           'l2_weights' | 'l2_biases'
+    %           'l2_weights' | 'l2_biases' | 'l1_weights' | 'l1_biases'
     %
     % OUTPUTS:
     %   layer: updated GAMLayer object
@@ -136,15 +136,17 @@ methods
         'GAM:GAMLayer:set_reg_params:Input should be a list of key-value pairs')
     i = 1;
     while i <= length(varargin)
+        assert(varargin{i+1} >= 0, ...
+            'GAM:GAMLayer:set_reg_params:reg value must be nonnegative')
         switch lower(varargin{i})
-			case 'l2_weights'
-                assert(varargin{i+1} >= 0, ...
-                    'GAM:GAMLayer:set_reg_params:reg value must be nonnegative')
+			case 'l2_weights'    
                 layer.reg_lambdas.l2_weights = varargin{i+1};
             case 'l2_biases'
-                assert(varargin{i+1} >= 0, ...
-                    'GAM:GAMLayer:set_reg_params:reg value must be nonnegative')
                 layer.reg_lambdas.l2_biases = varargin{i+1};
+            case 'l1_weights'
+                layer.reg_lambdas.l1_weights = varargin{i+1};
+            case 'l1_biases'
+                layer.reg_lambdas.l1_biases = varargin{i+1};
             otherwise
                 error('GAM:GAMLayer:set_reg_params:Invalid input flag "%s"', ...
                     varargin{i});
@@ -199,14 +201,20 @@ methods
     %   reg_pen: struct containing penalties due to different regs
     
     % set aside constants to keep things clean
-    lambda_w = layer.reg_lambdas.l2_weights;
-    lambda_b = layer.reg_lambdas.l2_biases;
+    lambda_l2_w = layer.reg_lambdas.l2_weights;
+    lambda_l2_b = layer.reg_lambdas.l2_biases;
+    lambda_l1_w = layer.reg_lambdas.l1_weights;
+    lambda_l1_b = layer.reg_lambdas.l1_biases;
     
     % get penalty terms
     % L2 on weights
-    reg_pen.l2_weights = 0.5*lambda_w*sum(sum(layer.weights.^2)); 
+    reg_pen.l2_weights = 0.5 * lambda_l2_w * sum(layer.weights(:).^2); 
     % L2 on biases
-    reg_pen.l2_biases = 0.5*lambda_b*sum(layer.biases.^2);
+    reg_pen.l2_biases = 0.5 * lambda_l2_b * sum(layer.biases.^2);
+    % L1 on weights
+    reg_pen.l1_weights = lambda_l1_w * sum(abs(layer.weights(:))); 
+    % L1 on biases
+    reg_pen.l2_biases = lambda_l1_b * sum(abs(layer.biases));
     
     end % method
     
@@ -307,7 +315,9 @@ methods (Static)
     %   reg_lambdas: struct containing initialized reg params
 
     reg_lambdas.l2_weights = 0;     % L2 on weights
-    reg_lambdas.l2_biases = 0;      % L2 on bias params
+    reg_lambdas.l2_biases = 0;      % L2 on biases
+    reg_lambdas.l1_weights = 0;     % L1 on weights
+    reg_lambdas.l1_biases = 0;      % L1 on biases
     
     end % method
  
